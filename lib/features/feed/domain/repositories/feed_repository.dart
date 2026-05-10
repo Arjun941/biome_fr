@@ -1,0 +1,5 @@
+import '../entities/post.dart';
+
+abstract class FeedRepository {
+  Future<List<Post>> getPosts();
+}
