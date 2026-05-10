@@ -1,4 +1,4 @@
-package com.example.biome_fr
+package com.biome.app
 
 import io.flutter.embedding.android.FlutterActivity
 
