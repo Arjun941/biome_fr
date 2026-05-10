@@ -1,37 +1,43 @@
+import 'dart:convert';
 import '../../domain/entities/post.dart';
+import '../models/post_model.dart';
+import '../../../../core/network/api_client.dart';
 
 class FeedRemoteDataSource {
+  final ApiClient apiClient;
+
+  FeedRemoteDataSource(this.apiClient);
+
   Future<List<Post>> getPosts() async {
-    // Simulate API delay
-    await Future.delayed(const Duration(seconds: 1));
-    return const [
-      Post(
-        id: '1',
-        authorName: 'Jane Doe',
-        location: 'San Francisco, CA',
-        imageUrl: 'https://images.unsplash.com/photo-1516934024742-b461fba47600?auto=format&fit=crop&w=600&q=80',
-        description: 'Just saw this beautiful red fox in the park!',
-        likes: 120,
-        comments: 15,
-      ),
-      Post(
-        id: '2',
-        authorName: 'John Smith',
-        location: 'Yellowstone National Park',
-        imageUrl: 'https://images.unsplash.com/photo-1549471013-3364d7ce79ea?auto=format&fit=crop&w=600&q=80',
-        description: 'A majestic eagle flying high.',
-        likes: 85,
-        comments: 4,
-      ),
-      Post(
-        id: '3',
-        authorName: 'Emily Clark',
-        location: 'Central Park, NY',
-        imageUrl: 'https://images.unsplash.com/photo-1502673530728-f79b4cab31b1?auto=format&fit=crop&w=600&q=80',
-        description: 'Found this cute raccoon foraging near the bushes.',
-        likes: 230,
-        comments: 42,
-      ),
-    ];
+    final response = await apiClient.get('/posts/feed');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = data['data'] as List<dynamic>? ?? [];
+      return items
+          .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load feed (${response.statusCode})');
+  }
+
+  Future<Post> createPost({required String content, String? imageBase64}) async {
+    final body = <String, dynamic>{'content': content};
+    if (imageBase64 != null) body['image_base64'] = imageBase64;
+
+    final response = await apiClient.post('/posts', body);
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 201) {
+      return PostModel.fromJson(data['post'] as Map<String, dynamic>);
+    }
+    throw Exception(data['error'] ?? 'Failed to create post');
+  }
+
+  Future<bool> likePost(String postId) async {
+    final response = await apiClient.post('/posts/$postId/like', {});
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['liked'] == true;
+    }
+    throw Exception('Failed to toggle like (${response.statusCode})');
   }
 }

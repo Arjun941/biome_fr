@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/post.dart';
+import '../bloc/feed_bloc.dart';
+import '../bloc/feed_event.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
@@ -10,7 +13,7 @@ class PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       color: Colors.grey[900],
       elevation: 2,
       child: Column(
@@ -19,52 +22,83 @@ class PostCard extends StatelessWidget {
           ListTile(
             leading: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Text(post.authorName[0], style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+              child: Text(
+                post.username.isNotEmpty ? post.username[0].toUpperCase() : '?',
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+              ),
             ),
-            title: Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(post.location, style: TextStyle(color: Colors.grey[400])),
-            trailing: const Icon(Icons.more_vert, color: Colors.grey),
+            title: Text(post.username, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              _timeAgo(post.createdAt),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
           ),
-          CachedNetworkImage(
-            imageUrl: post.imageUrl,
-            height: 250,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => SizedBox(
-              height: 250,
-              child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
+          if (post.imageBase64 != null && post.imageBase64!.isNotEmpty)
+            _buildImage(post.imageBase64!)
+          else if (post.hasImage)
+            Container(
+              height: 180,
+              color: Colors.grey[850],
+              child: const Center(child: Icon(Icons.image, color: Colors.grey, size: 40)),
             ),
-            errorWidget: (context, url, error) => const SizedBox(
-              height: 250,
-              child: Center(child: Icon(Icons.error, color: Colors.red)),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(post.content, style: const TextStyle(fontSize: 15)),
           ),
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(post.description),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.favorite_border),
-                  color: Theme.of(context).colorScheme.primary,
-                  onPressed: () {},
+                  icon: Icon(
+                    post.isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: post.isLiked ? Colors.red[400] : Colors.grey[400],
+                  ),
+                  onPressed: () => context.read<FeedBloc>().add(LikePostEvent(post.id)),
                 ),
-                Text('${post.likes}'),
+                Text('${post.likeCount}', style: TextStyle(color: Colors.grey[400])),
                 const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.comment_outlined),
-                  color: Colors.grey,
-                  onPressed: () {},
-                ),
-                Text('${post.comments}'),
+                Icon(Icons.chat_bubble_outline, color: Colors.grey[500], size: 20),
+                const SizedBox(width: 6),
+                Text('${post.commentCount}', style: TextStyle(color: Colors.grey[400])),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildImage(String base64Str) {
+    try {
+      // Strip data-URI prefix if present
+      final raw = base64Str.contains(',') ? base64Str.split(',').last : base64Str;
+      return Image.memory(
+        base64Decode(raw),
+        height: 250,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox(
+          height: 80,
+          child: Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+        ),
+      );
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+  }
+
+  String _timeAgo(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      final diff = DateTime.now().difference(dt);
+      if (diff.inSeconds < 60) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return '';
+    }
   }
 }

@@ -5,7 +5,7 @@ abstract class FeedState extends Equatable {
   const FeedState();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 class FeedInitial extends FeedState {}
@@ -18,7 +18,7 @@ class FeedLoaded extends FeedState {
   const FeedLoaded(this.posts);
 
   @override
-  List<Object> get props => [posts];
+  List<Object?> get props => [posts];
 }
 
 class FeedError extends FeedState {
@@ -27,5 +27,14 @@ class FeedError extends FeedState {
   const FeedError(this.message);
 
   @override
-  List<Object> get props => [message];
+  List<Object?> get props => [message];
+}
+
+class PostCreating extends FeedState {
+  final List<Post> posts;
+
+  const PostCreating(this.posts);
+
+  @override
+  List<Object?> get props => [posts];
 }
