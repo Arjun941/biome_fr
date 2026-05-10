@@ -7,6 +7,15 @@
             "type": "dart"
         },
         {
+            "name": "biome_fr (Web)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "-d",
+                "chrome"
+            ]
+        },
+        {
             "name": "biome_fr (profile mode)",
             "request": "launch",
             "type": "dart",
